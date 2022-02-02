@@ -1,0 +1,3 @@
+*.o
+glsel
+compile_commands.json

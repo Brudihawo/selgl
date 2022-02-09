@@ -368,6 +368,8 @@ Renderer create_renderer(GLFWwindow *window, const char* vert_shader_text, const
 }
 
 int main(int argc, char** argv) {
+  // TODO: Better arg parsing
+  // TODO: Implement usage function
   if (argc > 1) {
     win_size = atoi(argv[1]) - 1;
   } else {

@@ -20,8 +20,8 @@
 
 #define M_PI 3.1415926535897932384626433832795
 
-#define ACTIVE 0xC65333ff
-#define INACTIVE 0x697893ff
+#define ACTIVE 0xC65333dd
+#define INACTIVE 0x697893dd
 #define BG 0x00000000
 
 #define WIN_SIZE_DEFAULT 480
@@ -221,14 +221,15 @@ int cur_segment = -1;
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
   (void) mods;
-  if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+  if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
     double xpos_d, ypos_d;
     glfwGetCursorPos(window, &xpos_d, &ypos_d);
     float xpos = norm((float)xpos_d, 0.0, (float)width);
     float ypos = -norm((float)ypos_d, 0.0, (float)height);
-    cur_segment = active_seg(xpos, ypos, n_segments); if (length(xpos, ypos) > OUTER_RADIUS) {
+    cur_segment = active_seg(xpos, ypos, n_segments);
+    if (length(xpos, ypos) > OUTER_RADIUS) {
       cur_segment = -1;
     }
 
@@ -238,6 +239,27 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
   if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
     glfwSetWindowShouldClose(window, GLFW_TRUE);
     cur_segment = -1;
+  }
+}
+
+void cursor_enter_callback(GLFWwindow *window, int entered) {
+  if (!entered) {
+    glfwSetWindowShouldClose(window, GLFW_TRUE);
+    cur_segment = -1;
+  }
+}
+
+bool moved = false;
+
+void cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
+  if (!moved) return;
+  int width, height;
+  glfwGetFramebufferSize(window, &width, &height);
+  float xpos_f = norm((float)xpos, 0.0, (float)width);
+  float ypos_f = -norm((float)ypos, 0.0, (float)height);
+  if (length(xpos_f, ypos_f) > OUTER_RADIUS) {
+    cur_segment = -1;
+    glfwSetWindowShouldClose(window, GLFW_TRUE);
   }
 }
 
@@ -254,6 +276,8 @@ void init_gl(void) {
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
   glfwWindowHint(GLFW_FLOATING, GLFW_TRUE);
+  glfwWindowHint(GLFW_FOCUSED, GLFW_TRUE);
+  glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
   glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
   glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE);
 }
@@ -278,6 +302,8 @@ GLFWwindow* create_win(int win_size) {
   // glfwSetWindowOpacity(window, 0.5f);
   glfwSetKeyCallback(window, key_callback);
   glfwSetMouseButtonCallback(window, mouse_button_callback);
+  glfwSetCursorEnterCallback(window, cursor_enter_callback);
+  glfwSetCursorPosCallback(window, cursor_position_callback);
 
   glfwSwapInterval(1);
 
@@ -343,13 +369,13 @@ Renderer create_renderer(GLFWwindow *window, const char* vert_shader_text, const
 
 int main(int argc, char** argv) {
   if (argc > 1) {
-    win_size = atoi(argv[1]);
+    win_size = atoi(argv[1]) - 1;
   } else {
     win_size = WIN_SIZE_DEFAULT;
   }
 
   if (argc > 2) {
-    n_segments = atoi(argv[2]);
+    n_segments = atoi(argv[2]) - 1;
   } else {
     n_segments = N_SEGMENTS_DEFAULT;
   }
@@ -363,7 +389,9 @@ int main(int argc, char** argv) {
   int xpos_w, ypos_w;
   glfwGetCursorPos(window, &xpos_d, &ypos_d);
   glfwGetWindowPos(window, &xpos_w, &ypos_w);
-  glfwSetWindowPos(window, (int)xpos_d + xpos_w - win_size / 2, (int)ypos_d + ypos_w - win_size / 2);
+  glfwSetWindowPos(window, (int)xpos_d + xpos_w - win_size / 2,
+                           (int)ypos_d + ypos_w - win_size / 2);
+  moved = true;
 
   // Render Loop
   while (!glfwWindowShouldClose(window)) {
@@ -393,7 +421,6 @@ int main(int argc, char** argv) {
     glfwPollEvents();
   }
 
-  // TODO: Integrate into pentablet workflow
   printf("%i\n", cur_segment);
   glfwDestroyWindow(window);
   glfwTerminate();
